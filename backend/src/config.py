@@ -5,4 +5,13 @@ env.read_env()
 
 DEBUG = env.bool("DEBUG", True)
 REDIS_URL = env.str("REDIS_URL", "redis://localhost/1")
-POSTGRES_URL = env.str("POSTGRES_URL", "postgresql+asyncpg://user:1234@localhost/chat")
+POSTGRES_URL = env.str(
+    "POSTGRES_URL", "postgresql+asyncpg://user:1234@localhost/chat"
+)
+
+APP_TITLE = env.str("APP_TITLE", "ChatApplication")
+SECRET_KEY = env.str("SECRET_KEY", "test")
+ALGORITHM = env.str("ALGORITHM", "HS256")
+TOKEN_EXPIRE = env.int("TOKEN_EXPIRE", 1800)  # in seconds
+BASE_URL = env.str("BASE_URL", "")
+TOKEN_KEY = env.str("TOKEN_KEY", "session")

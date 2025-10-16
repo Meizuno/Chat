@@ -1,18 +1,24 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, Uuid, Text, DateTime
+from sqlalchemy import Column, Uuid, Text, DateTime, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
 
-class Message(Base):
-    """Message model"""
+class UserModel(Base):
+    """Base user model"""
 
-    __tablename__ = "message"
+    __tablename__ = "user"
 
     id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    text = Column(Text)
+    first_name = Column(String)
+    last_name = Column(String)
+    username = Column(String, unique=True, index=True)
+    password = Column(String)
+    is_active = Column(Boolean, default=True)
+    is_2fa_enabled = Column(Boolean, default=False)
+    otp_secret = Column(String, nullable=True)
 
     created_at = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
@@ -24,18 +30,36 @@ class Message(Base):
     )
 
 
-class Chat(Base):
-    """Messenger chat model"""
+# class MessageModel(Base):
+#     """Message model"""
 
-    __tablename__ = "chat"
+#     __tablename__ = "message"
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+#     id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+#     text = Column(Text)
 
-    created_at = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc),
-    )
+#     created_at = Column(
+#         DateTime(timezone=True), default=datetime.now(timezone.utc)
+#     )
+#     updated_at = Column(
+#         DateTime(timezone=True),
+#         default=datetime.now(timezone.utc),
+#         onupdate=datetime.now(timezone.utc),
+#     )
+
+
+# class ChatModel(Base):
+#     """Messenger chat model"""
+
+#     __tablename__ = "chat"
+
+#     id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+
+#     created_at = Column(
+#         DateTime(timezone=True), default=datetime.now(timezone.utc)
+#     )
+#     updated_at = Column(
+#         DateTime(timezone=True),
+#         default=datetime.now(timezone.utc),
+#         onupdate=datetime.now(timezone.utc),
+#     )

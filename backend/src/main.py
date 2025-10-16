@@ -1,18 +1,15 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, APIRouter
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schema import Message, MessageResponse
+from src.config import BASE_URL
+from src.routers import auth
 from src.logger import logger
 from src.models import Base
 from src.services import (
-    get_pg_session,
     get_pg_engine,
     get_redis,
-    create_message,
 )
 
 
@@ -41,40 +38,44 @@ async def lifespan(app_span: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+router = APIRouter(prefix=BASE_URL)
+router.include_router(auth.router)
+app.include_router(router)
 
-@app.get("/")
+
+@router.get("/")
 def health():
     """Change if server is alive"""
 
     return "OK"
 
 
-@app.get("/stream")
-async def stream():
-    """Server Sent Action for new message"""
+# @app.get("/stream")
+# async def stream():
+#     """Server Sent Action for new message"""
 
-    pubsub = app.state.redis.pubsub()
-    await pubsub.subscribe("chat")
+#     pubsub = app.state.redis.pubsub()
+#     await pubsub.subscribe("chat")
 
-    async def event_stream():
-        try:
-            async for msg in pubsub.listen():
-                if msg["type"] == "message":
-                    yield f"data: {msg['data']}\n\n"
-        finally:
-            await pubsub.unsubscribe("chat")
-            await pubsub.close()
+#     async def event_stream():
+#         try:
+#             async for msg in pubsub.listen():
+#                 if msg["type"] == "message":
+#                     yield f"data: {msg['data']}\n\n"
+#         finally:
+#             await pubsub.unsubscribe("chat")
+#             await pubsub.close()
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+#     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-@app.post("/message")
-async def send_message(
-    message: Message, session: AsyncSession = Depends(get_pg_session)
-) -> MessageResponse:
-    """Post new message to chat"""
+# @app.post("/message")
+# async def send_message(
+#     message: Message, session: AsyncSession = Depends(get_pg_session)
+# ) -> MessageResponse:
+#     """Post new message to chat"""
 
-    message_instance = await create_message(session, message.input.text)
-    message_response = MessageResponse.model_validate(message_instance)
-    await app.state.redis.publish("chat", message_response.model_dump_json())
-    return message_response
+#     message_instance = await create_message(session, message.input.text)
+#     message_response = MessageResponse.model_validate(message_instance)
+#     await app.state.redis.publish("chat", message_response.model_dump_json())
+#     return message_response

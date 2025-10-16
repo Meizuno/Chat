@@ -1,12 +1,12 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.models import Message
+# from sqlalchemy.ext.asyncio import AsyncSession
+# from src.models import MessageModel
 
 
-async def create_message(session: AsyncSession, text: str) -> Message:
-    """Create Message instance"""
+# async def create_message(session: AsyncSession, text: str) -> MessageModel:
+#     """Create Message instance"""
 
-    message = Message(text=text)
-    session.add(message)
-    await session.commit()
-    await session.refresh(message)
-    return message
+#     message = MessageModel(text=text)
+#     session.add(message)
+#     await session.commit()
+#     await session.refresh(message)
+#     return message
