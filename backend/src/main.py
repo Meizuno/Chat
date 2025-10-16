@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 from sqlalchemy import text
 
-from src.config import BASE_URL
+from src.config import BASE_URL, APP_TITLE
 from src.routers import auth
 from src.logger import logger
 from src.models import Base
@@ -36,7 +36,14 @@ async def lifespan(app_span: FastAPI):
     logger.info("🛑 Application shutting down")
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title=APP_TITLE,
+    docs_url=f"{BASE_URL}/docs",
+    redoc_url=f"{BASE_URL}/redoc",
+    openapi_url=f"{BASE_URL}/openapi.json"
+)
+
 
 router = APIRouter(prefix=BASE_URL)
 router.include_router(auth.router)
