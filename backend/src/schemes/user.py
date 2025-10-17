@@ -1,11 +1,10 @@
 from uuid import UUID
-from typing import Literal, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 from src.utils import to_camel
 
 
-class UserScheme(BaseModel):
+class RegisterScheme(BaseModel):
     """Base user model in application"""
 
     first_name: str
@@ -36,25 +35,43 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-class TextMessageScheme(BaseModel):
-    """Text model message schema"""
+class UserScheme(BaseModel):
+    """Base user model in application"""
 
-    type: Literal["text"]
-    text: str = Field(..., min_length=1)
+    id: UUID
+    first_name: str
+    last_name: str
+    username: str
+
+    class Config:
+        alias_generator = to_camel
+        populate_by_name = True
+
+
+class UserUpdateScheme(BaseModel):
+    """Model for user update"""
+
+    first_name: str
+    last_name: str
+    username: str
 
     class Config:
         alias_generator = to_camel
         populate_by_name = True
 
 
-class MessageScheme(BaseModel):
-    """Base message from client"""
+class UserSearchResponse(BaseModel):
+    """User model from search response"""
 
-    input: Union[TextMessageScheme] = Field(discriminator="type")
+    id: UUID
+    first_name: str
+    last_name: str
+    username: str
 
     class Config:
         alias_generator = to_camel
         populate_by_name = True
+        from_attributes = True
 
 
 class MessageResponse(BaseModel):
@@ -85,7 +102,7 @@ class LoginScheme(BaseModel):
 class OTPValidateScheme(BaseModel):
     """Model for OTP verification"""
 
-    username: str
+    id: UUID
     code: str = Field(..., min_length=6, max_length=6)
 
     class Config:
@@ -97,7 +114,7 @@ class OTPRequiredResponse(BaseModel):
     """Model for required OTP verification"""
 
     otp_required: bool
-    username: str
+    id: UUID
 
     class Config:
         alias_generator = to_camel

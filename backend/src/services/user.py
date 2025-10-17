@@ -1,4 +1,5 @@
 from datetime import timedelta, datetime, timezone
+from uuid import UUID
 
 import jwt
 import pyotp
@@ -9,7 +10,12 @@ from sqlalchemy.exc import IntegrityError
 from pwdlib import PasswordHash
 
 from src.config import SECRET_KEY, TOKEN_EXPIRE, ALGORITHM, APP_TITLE, TOKEN_KEY
-from src.schemes.user import UserScheme, LoginScheme, OTPValidateScheme
+from src.schemes.user import (
+    UserScheme,
+    RegisterScheme,
+    LoginScheme,
+    OTPValidateScheme,
+)
 from src.models import UserModel
 
 password_hash = PasswordHash.recommended()
@@ -27,21 +33,21 @@ def get_password_hash(password: str) -> str:
     return password_hash.hash(password)
 
 
-def create_token(username: str) -> str:
+def create_token(user_id: UUID) -> str:
     """Create JWT-token"""
 
     expire = datetime.now(timezone.utc) + timedelta(seconds=TOKEN_EXPIRE)
     return jwt.encode(
-        {"username": username, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM
+        {"id": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM
     )
 
 
-def decode_token(token: str) -> str:
+def decode_token(token: str) -> UUID:
     """Decode user data"""
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("username")
+        return UUID(payload.get("id"))
     except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
@@ -52,7 +58,7 @@ def decode_token(token: str) -> str:
         ) from exc
 
 
-async def create_user(session: AsyncSession, user: UserScheme) -> UserModel:
+async def create_user(session: AsyncSession, user: RegisterScheme) -> UserModel:
     """Create user instance"""
 
     user_dict = user.model_dump()
@@ -72,13 +78,13 @@ async def create_user(session: AsyncSession, user: UserScheme) -> UserModel:
     return user
 
 
-async def get_user(session: AsyncSession, username: str) -> UserModel:
+async def get_user(session: AsyncSession, user_id: UUID) -> UserModel:
     """Get user instance"""
 
     stmt = (
         select(UserModel)
-        .where(UserModel.username == username)
-        .where(UserModel.is_active == True)
+        .where(UserModel.id == user_id)
+        .where(UserModel.is_active)
     )
     user = await session.scalar(stmt)
 
@@ -95,7 +101,19 @@ async def user_login(
 ) -> UserModel:
     """Login user"""
 
-    user = await get_user(session, credentials.username)
+    stmt = (
+        select(UserModel)
+        .where(UserModel.username == credentials.username)
+        .where(UserModel.is_active)
+    )
+    user = await session.scalar(stmt)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
+
     if not verify_password(credentials.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -105,10 +123,10 @@ async def user_login(
     return user
 
 
-def set_auth_cookie(response: Response, username: str) -> None:
+def set_auth_cookie(response: Response, user_id: UUID) -> None:
     """Set secure auth cookie"""
 
-    token = create_token(username)
+    token = create_token(user_id)
     response.set_cookie(
         key=TOKEN_KEY,
         value=token,
@@ -119,10 +137,16 @@ def set_auth_cookie(response: Response, username: str) -> None:
     )
 
 
-async def enable_2fa(session: AsyncSession, username: str) -> str:
+def delete_auth_cookie(response: Response) -> None:
+    """Delete auth cookie"""
+
+    response.delete_cookie(key=TOKEN_KEY)
+
+
+async def enable_2fa(session: AsyncSession, user_id: UUID) -> str:
     """Enable 2FA for user"""
 
-    user = await get_user(session, username)
+    user = await get_user(session, user_id)
     user.is_2fa_enabled = True
     user.otp_secret = pyotp.random_base32()
     session.add(user)
@@ -130,7 +154,7 @@ async def enable_2fa(session: AsyncSession, username: str) -> str:
     await session.refresh(user)
 
     totp = pyotp.TOTP(user.otp_secret)
-    otp_uri = totp.provisioning_uri(name=username, issuer_name=APP_TITLE)
+    otp_uri = totp.provisioning_uri(name=user.username, issuer_name=APP_TITLE)
 
     return otp_uri
 
@@ -140,7 +164,7 @@ async def validate_2fa(
 ) -> UserModel:
     """Verify 2FA code"""
 
-    user = await get_user(session, verification.username)
+    user = await get_user(session, verification.id)
     if not user.is_2fa_enabled or not user.otp_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="2FA is not enabled"
@@ -153,3 +177,48 @@ async def validate_2fa(
         )
 
     return user
+
+
+async def search_users(
+    session: AsyncSession, username_contains: str
+) -> list[UserModel]:
+    """Search users by username substring"""
+
+    stmt = (
+        select(UserModel)
+        .where(UserModel.username.contains(username_contains))
+        .where(UserModel.is_active)
+    )
+    result = await session.scalars(stmt)
+    return result.all()
+
+
+async def update_user(
+    session: AsyncSession,
+    user_id: UUID,
+    user: UserScheme,
+) -> UserModel:
+    """Update user information"""
+
+    user_instance = await get_user(session, user_id)
+
+    user_instance.first_name = user.first_name
+    user_instance.last_name = user.last_name
+    user_instance.username = user.username
+
+    session.add(user_instance)
+    await session.commit()
+    await session.refresh(user_instance)
+
+    return user_instance
+
+
+async def delete_user(
+    session: AsyncSession, user_id: UUID
+) -> None:
+    """Soft delete user"""
+
+    user = await get_user(session, user_id)
+    user.is_active = False
+    session.add(user)
+    await session.commit()
