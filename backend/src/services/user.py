@@ -164,7 +164,7 @@ async def validate_2fa(
 ) -> UserModel:
     """Verify 2FA code"""
 
-    user = await get_user(session, verification.id)
+    user = await get_user(session, verification.user_id)
     if not user.is_2fa_enabled or not user.otp_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="2FA is not enabled"

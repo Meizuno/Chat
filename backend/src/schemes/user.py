@@ -17,8 +17,19 @@ class RegisterScheme(BaseModel):
         populate_by_name = True
 
 
-class UserResponse(BaseModel):
-    """User model from response"""
+class LoginScheme(BaseModel):
+    """Model for login"""
+
+    username: str
+    password: str
+
+    class Config:
+        alias_generator = to_camel
+        populate_by_name = True
+
+
+class AuthenticatedUser(BaseModel):
+    """Model for authenticated user"""
 
     id: UUID
     first_name: str
@@ -74,35 +85,10 @@ class UserSearchResponse(BaseModel):
         from_attributes = True
 
 
-class MessageResponse(BaseModel):
-    """Base message response"""
-
-    id: UUID
-    text: str
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-        from_attributes = True
-
-
-class LoginScheme(BaseModel):
-    """Model for login"""
-
-    username: str
-    password: str
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-
-
 class OTPValidateScheme(BaseModel):
     """Model for OTP verification"""
 
-    id: UUID
+    user_id: UUID
     code: str = Field(..., min_length=6, max_length=6)
 
     class Config:
@@ -114,7 +100,7 @@ class OTPRequiredResponse(BaseModel):
     """Model for required OTP verification"""
 
     otp_required: bool
-    id: UUID
+    user_id: UUID
 
     class Config:
         alias_generator = to_camel
