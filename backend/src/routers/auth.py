@@ -14,6 +14,7 @@ from src.config import TOKEN_KEY
 
 router = APIRouter(prefix="/user", tags=["user"])
 api_key_cookie = APIKeyCookie(name=TOKEN_KEY)
+refresh_api_key_cookie = APIKeyCookie(name=f"{TOKEN_KEY}_refresh")
 
 
 @router.post("/register")
@@ -45,6 +46,17 @@ async def login(
 
     user_service.set_auth_cookie(response, user_instance.id)
     return user_scheme.AuthenticatedUser.model_validate(user_instance)
+
+
+@router.post("/refresh")
+async def refresh_session(
+    response: Response,
+    refresh_token: str = Depends(refresh_api_key_cookie),
+) -> None:
+    """Refresh auth token"""
+
+    user_id = user_service.decode_token(refresh_token)
+    user_service.refresh_auth_cookie(response, user_id)
 
 
 @router.get("/me")

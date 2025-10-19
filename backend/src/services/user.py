@@ -9,7 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from pwdlib import PasswordHash
 
-from src.config import SECRET_KEY, TOKEN_EXPIRE, ALGORITHM, APP_TITLE, TOKEN_KEY
+from src.config import (
+    DEBUG,
+    SECRET_KEY,
+    TOKEN_EXPIRE,
+    ALGORITHM,
+    APP_TITLE,
+    TOKEN_KEY,
+    REFRESH_TOKEN_EXPIRE,
+)
 from src.schemes.user import (
     UserScheme,
     RegisterScheme,
@@ -36,7 +44,16 @@ def get_password_hash(password: str) -> str:
 def create_token(user_id: UUID) -> str:
     """Create JWT-token"""
 
-    expire = datetime.now(timezone.utc) + timedelta(seconds=TOKEN_EXPIRE)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE)
+    return jwt.encode(
+        {"id": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM
+    )
+
+
+def create_refresh_token(user_id: UUID) -> str:
+    """Create refresh JWT-token"""
+
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE)
     return jwt.encode(
         {"id": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM
     )
@@ -127,13 +144,47 @@ def set_auth_cookie(response: Response, user_id: UUID) -> None:
     """Set secure auth cookie"""
 
     token = create_token(user_id)
+    refresh_token = create_refresh_token(user_id)
+
     response.set_cookie(
         key=TOKEN_KEY,
         value=token,
         httponly=True,
         max_age=TOKEN_EXPIRE,
         samesite="lax",
-        secure=False,  # TODO: Set to True in production
+        secure=DEBUG,
+    )
+    response.set_cookie(
+        key=f"{TOKEN_KEY}_refresh",
+        value=refresh_token,
+        httponly=True,
+        max_age=REFRESH_TOKEN_EXPIRE,
+        samesite="lax",
+        secure=DEBUG,
+    )
+
+
+def refresh_auth_cookie(response: Response, user_id: UUID) -> None:
+    """Refresh auth cookie"""
+
+    token = create_token(user_id)
+    refresh_token = create_refresh_token(user_id)
+
+    response.set_cookie(
+        key=TOKEN_KEY,
+        value=token,
+        httponly=True,
+        max_age=TOKEN_EXPIRE,
+        samesite="lax",
+        secure=DEBUG,
+    )
+    response.set_cookie(
+        key=f"{TOKEN_KEY}_refresh",
+        value=refresh_token,
+        httponly=True,
+        max_age=REFRESH_TOKEN_EXPIRE,
+        samesite="lax",
+        secure=DEBUG,
     )
 
 
@@ -141,6 +192,7 @@ def delete_auth_cookie(response: Response) -> None:
     """Delete auth cookie"""
 
     response.delete_cookie(key=TOKEN_KEY)
+    response.delete_cookie(key=f"{TOKEN_KEY}_refresh")
 
 
 async def enable_2fa(session: AsyncSession, user_id: UUID) -> str:
@@ -213,9 +265,7 @@ async def update_user(
     return user_instance
 
 
-async def delete_user(
-    session: AsyncSession, user_id: UUID
-) -> None:
+async def delete_user(session: AsyncSession, user_id: UUID) -> None:
     """Soft delete user"""
 
     user = await get_user(session, user_id)
