@@ -12,7 +12,7 @@ export default defineWebSocketHandler({
   }
 })
 function onCalc(peer: Peer, message: Message) {
-  if(message.text().startsWith('calc ')){
+  if (message.text().startsWith('calc ')) {
     const equation = message.text().replace('calc ', '')
     // TODO: UNSAFE - DO NOT DO IN PROD, CAN LEAD TO XSS/RCI
     const result = eval(equation)
