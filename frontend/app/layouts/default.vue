@@ -71,13 +71,7 @@
       </template>
 
       <template #footer="{ collapsed }">
-        <UButton
-          :label="collapsed ? '' : 'Login'"
-          icon="i-lucide-log-in"
-          color="neutral"
-          variant="ghost"
-          class="w-full"
-        />
+        <UserAuthentication />
       </template>
     </UDashboardSidebar>
 
@@ -106,6 +100,7 @@
 
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
+import UserAuthentication from '~/components/UserAuthentication.vue'
 
 const items = ref<NavigationMenuItem[][]>([
   [
