@@ -4,7 +4,7 @@ from fastapi import FastAPI, APIRouter
 from sqlalchemy import text
 
 from src.config import BASE_URL, APP_TITLE
-from src.routers import auth
+from src.routers import auth, user
 from src.logger import logger
 from src.models import Base
 from src.services import (
@@ -47,6 +47,7 @@ app = FastAPI(
 
 router = APIRouter(prefix=BASE_URL)
 router.include_router(auth.router)
+router.include_router(user.router)
 app.include_router(router)
 
 

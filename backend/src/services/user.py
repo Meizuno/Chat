@@ -89,7 +89,7 @@ async def create_user(session: AsyncSession, user: RegisterScheme) -> UserModel:
     except IntegrityError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username already exists",
+            detail="email already exists",
         ) from exc
 
     return user
@@ -120,7 +120,7 @@ async def user_login(
 
     stmt = (
         select(UserModel)
-        .where(UserModel.username == credentials.username)
+        .where(UserModel.email == credentials.email)
         .where(UserModel.is_active)
     )
     user = await session.scalar(stmt)
@@ -206,7 +206,7 @@ async def enable_2fa(session: AsyncSession, user_id: UUID) -> str:
     await session.refresh(user)
 
     totp = pyotp.TOTP(user.otp_secret)
-    otp_uri = totp.provisioning_uri(name=user.username, issuer_name=APP_TITLE)
+    otp_uri = totp.provisioning_uri(name=user.email, issuer_name=APP_TITLE)
 
     return otp_uri
 
@@ -232,13 +232,13 @@ async def validate_2fa(
 
 
 async def search_users(
-    session: AsyncSession, username_contains: str
+    session: AsyncSession, email_contains: str
 ) -> list[UserModel]:
-    """Search users by username substring"""
+    """Search users by email substring"""
 
     stmt = (
         select(UserModel)
-        .where(UserModel.username.contains(username_contains))
+        .where(UserModel.email.contains(email_contains))
         .where(UserModel.is_active)
     )
     result = await session.scalars(stmt)
@@ -256,7 +256,7 @@ async def update_user(
 
     user_instance.first_name = user.first_name
     user_instance.last_name = user.last_name
-    user_instance.username = user.username
+    user_instance.email = user.email
 
     session.add(user_instance)
     await session.commit()
