@@ -17,17 +17,6 @@ class RegisterScheme(BaseModel):
         populate_by_name = True
 
 
-class LoginScheme(BaseModel):
-    """Model for login"""
-
-    email: EmailStr
-    password: str
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-
-
 class AuthenticatedUser(BaseModel):
     """Model for authenticated user"""
 
@@ -57,6 +46,7 @@ class UserScheme(BaseModel):
     class Config:
         alias_generator = to_camel
         populate_by_name = True
+        from_attributes = True
 
 
 class UserUpdateScheme(BaseModel):
@@ -65,31 +55,6 @@ class UserUpdateScheme(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     email: EmailStr
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-
-
-class UserSearchResponse(BaseModel):
-    """User model from search response"""
-
-    id: UUID
-    first_name: str | None = None
-    last_name: str | None = None
-    email: EmailStr
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-        from_attributes = True
-
-
-class OTPValidateScheme(BaseModel):
-    """Model for OTP verification"""
-
-    user_id: UUID
-    code: str = Field(..., min_length=6, max_length=6)
 
     class Config:
         alias_generator = to_camel

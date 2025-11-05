@@ -10,3 +10,4 @@ pyjwt==2.10.1
 pwdlib[argon2]==0.2.1
 pyotp==2.9.0
 qrcode[pil]==8.2
+pytest==8.4.2

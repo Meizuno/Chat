@@ -1,17 +1,14 @@
-from typing import List
+from typing import List, Annotated
 
-from fastapi import APIRouter, Response, Depends
-from fastapi.security import APIKeyCookie
+from fastapi import APIRouter, Response, Depends, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import api_key_cookie
 from src.services import get_pg_session
 from src.schemes import user as user_scheme
 from src.services import user as user_service
-from src.config import TOKEN_KEY
 
 router = APIRouter(prefix="/user", tags=["user"])
-api_key_cookie = APIKeyCookie(name=TOKEN_KEY)
-refresh_api_key_cookie = APIKeyCookie(name=f"{TOKEN_KEY}_refresh")
 
 
 @router.get("/me")
@@ -31,12 +28,12 @@ async def read_users(
     _: str = Depends(api_key_cookie),
     email_contains: str = "",
     session: AsyncSession = Depends(get_pg_session),
-) -> List[user_scheme.UserSearchResponse]:
+) -> List[user_scheme.UserScheme]:
     """Get list of users whose emails contain the given substring"""
 
     users = await user_service.search_users(session, email_contains)
     return [
-        user_scheme.UserSearchResponse.model_validate(user_instance)
+        user_scheme.UserScheme.model_validate(user_instance)
         for user_instance in users
     ]
 
@@ -67,3 +64,26 @@ async def delete_user(
     auth_user_id = user_service.decode_token(token)
     await user_service.delete_user(session, auth_user_id)
     user_service.delete_auth_cookie(response)
+
+
+@router.put("/reset-password")
+async def reset_password(
+    old: Annotated[str, Body()],
+    new: Annotated[str, Body()],
+    token: str = Depends(api_key_cookie),
+    session: AsyncSession = Depends(get_pg_session),
+):
+    """Reset user password"""
+
+    user_id = user_service.decode_token(token)
+    await user_service.reset_password(session, user_id, old, new)
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    email: Annotated[str, Body()],
+    session: AsyncSession = Depends(get_pg_session),
+) -> None:
+    """Send mail to user for new password"""
+
+    await user_service.forgot_password(session, email)

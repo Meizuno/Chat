@@ -41,9 +41,8 @@ app = FastAPI(
     title=APP_TITLE,
     docs_url=f"{BASE_URL}/docs",
     redoc_url=f"{BASE_URL}/redoc",
-    openapi_url=f"{BASE_URL}/openapi.json"
+    openapi_url=f"{BASE_URL}/openapi.json",
 )
-
 
 router = APIRouter(prefix=BASE_URL)
 router.include_router(auth.router)

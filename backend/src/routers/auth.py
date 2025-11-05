@@ -1,20 +1,19 @@
 import io
-from typing import Union
+from typing import Union, Annotated
+from uuid import UUID
 
 import qrcode
-from fastapi import APIRouter, Response, Depends
-from fastapi.security import APIKeyCookie
+from pydantic import EmailStr
+from fastapi import APIRouter, Response, Depends, Body
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import api_key_cookie, refresh_api_key_cookie
 from src.services import get_pg_session
 from src.schemes import user as user_scheme
 from src.services import user as user_service
-from src.config import TOKEN_KEY
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-api_key_cookie = APIKeyCookie(name=TOKEN_KEY)
-refresh_api_key_cookie = APIKeyCookie(name=f"{TOKEN_KEY}_refresh")
 
 
 @router.post("/register")
@@ -25,27 +24,28 @@ async def register(
 ) -> user_scheme.AuthenticatedUser:
     """User registration"""
 
-    user_instance = await user_service.create_user(session, user)
-    user_service.set_auth_cookie(response, user_instance.email)
-    return user_scheme.AuthenticatedUser.model_validate(user_instance)
+    user_model = await user_service.create_user(session, user)
+    user_service.set_auth_cookie(response, user_model.id)
+    return user_scheme.AuthenticatedUser.model_validate(user_model)
 
 
 @router.post("/login")
 async def login(
     response: Response,
-    credentials: user_scheme.LoginScheme,
+    email: Annotated[EmailStr, Body()],
+    password: Annotated[str, Body()],
     session: AsyncSession = Depends(get_pg_session),
 ) -> Union[user_scheme.AuthenticatedUser, user_scheme.OTPRequiredResponse]:
     """User registration"""
 
-    user_instance = await user_service.user_login(session, credentials)
-    if user_instance.is_2fa_enabled:
+    user_model = await user_service.user_login(session, email, password)
+    if user_model.is_2fa_enabled:
         return user_scheme.OTPRequiredResponse(
-            otp_required=True, user_id=user_instance.id
+            otp_required=True, user_id=user_model.id
         )
 
-    user_service.set_auth_cookie(response, user_instance.id)
-    return user_scheme.AuthenticatedUser.model_validate(user_instance)
+    user_service.set_auth_cookie(response, user_model.id)
+    return user_scheme.AuthenticatedUser.model_validate(user_model)
 
 
 @router.post("/refresh")
@@ -80,14 +80,15 @@ async def enable_2fa(
 @router.post("/2fa/validate")
 async def validate_2fa(
     response: Response,
-    verification: user_scheme.OTPValidateScheme,
+    user_id: Annotated[UUID, Body()],
+    code: Annotated[str, Body(min_length=6, max_length=6)],
     session: AsyncSession = Depends(get_pg_session),
 ):
     """Validate 2FA code and login"""
 
-    user_instance = await user_service.validate_2fa(session, verification)
-    user_service.set_auth_cookie(response, verification.user_id)
-    return user_scheme.AuthenticatedUser.model_validate(user_instance)
+    user_model = await user_service.validate_2fa(session, user_id, code)
+    user_service.set_auth_cookie(response, user_id)
+    return user_scheme.AuthenticatedUser.model_validate(user_model)
 
 
 @router.post("/logout")
