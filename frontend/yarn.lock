@@ -1700,7 +1700,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nuxt/kit@npm:^3.13.2, @nuxt/kit@npm:^3.17.3, @nuxt/kit@npm:^3.19.3":
+"@nuxt/kit@npm:^3.13.2, @nuxt/kit@npm:^3.17.3, @nuxt/kit@npm:^3.19.3, @nuxt/kit@npm:^3.9.0":
   version: 3.20.0
   resolution: "@nuxt/kit@npm:3.20.0"
   dependencies:
@@ -2455,6 +2455,17 @@ __metadata:
     "@parcel/watcher-win32-x64":
       optional: true
   checksum: 10c0/8f35073d0c0b34a63d4c8d2213482f0ebc6a25de7b2cdd415d19cb929964a793cb285b68d1d50bfb732b070b3c82a2fdb4eb9c250eab709a1cd9d63345455a82
+  languageName: node
+  linkType: hard
+
+"@pinia/nuxt@npm:^0.11.2":
+  version: 0.11.2
+  resolution: "@pinia/nuxt@npm:0.11.2"
+  dependencies:
+    "@nuxt/kit": "npm:^3.9.0"
+  peerDependencies:
+    pinia: ^3.0.3
+  checksum: 10c0/baf0c496ce81043f2881d5d00124517b14983638d1ee28061786d3a26d23a2f3b899a841b348ab8ebaaca65613640ddbaa560cefecda4f4f9ca0cf7a5815c750
   languageName: node
   linkType: hard
 
@@ -3678,6 +3689,15 @@ __metadata:
   version: 6.6.4
   resolution: "@vue/devtools-api@npm:6.6.4"
   checksum: 10c0/0a993ae23618166e1bee5a7c14cebd8312752b93c143cbdd48fb2d0f7ade070d0e6baf757cd920d4681fef8f9acf29515162160f38cc7410f9a684d2df21b6de
+  languageName: node
+  linkType: hard
+
+"@vue/devtools-api@npm:^7.7.2":
+  version: 7.7.7
+  resolution: "@vue/devtools-api@npm:7.7.7"
+  dependencies:
+    "@vue/devtools-kit": "npm:^7.7.7"
+  checksum: 10c0/9c7e754b706f54c5ace31520acb50bda398ff15eb4350b30e9dfb1c8c692094951e68ee1713c2833d79c393c53653987c65c11031a079ad391d84bf505b74264
   languageName: node
   linkType: hard
 
@@ -8044,11 +8064,13 @@ __metadata:
   dependencies:
     "@nuxt/eslint": "npm:^1.9.0"
     "@nuxt/ui": "npm:^4.1.0"
+    "@pinia/nuxt": "npm:^0.11.2"
     "@vueuse/nuxt": "npm:^13.9.0"
     eslint: "npm:^9.38.0"
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-prettier: "npm:^5.5.4"
     nuxt: "npm:^4.1.0"
+    pinia: "npm:^3.0.3"
     prettier: "npm:^3.6.2"
     typescript: "npm:^5.9.3"
     vue: "npm:^3.5.20"
@@ -8638,6 +8660,21 @@ __metadata:
   version: 4.0.3
   resolution: "picomatch@npm:4.0.3"
   checksum: 10c0/9582c951e95eebee5434f59e426cddd228a7b97a0161a375aed4be244bd3fe8e3a31b846808ea14ef2c8a2527a6eeab7b3946a67d5979e81694654f939473ae2
+  languageName: node
+  linkType: hard
+
+"pinia@npm:^3.0.3":
+  version: 3.0.3
+  resolution: "pinia@npm:3.0.3"
+  dependencies:
+    "@vue/devtools-api": "npm:^7.7.2"
+  peerDependencies:
+    typescript: ">=4.4.4"
+    vue: ^2.7.0 || ^3.5.11
+  peerDependenciesMeta:
+    typescript:
+      optional: true
+  checksum: 10c0/486f464ce402e33c502caf564bebcd00c364e7d57432373f64201da0cdbbc96a6357fecb5ee09882228d3c17d400af1f0c9550ddf2d19f2ef2931860a427cc23
   languageName: node
   linkType: hard
 
