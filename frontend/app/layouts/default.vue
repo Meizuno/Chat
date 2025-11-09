@@ -72,11 +72,13 @@
 
       <template #footer="{ collapsed }">
         <UButton
+          to="/auth/login"
           :label="collapsed ? '' : 'Login'"
           icon="i-lucide-log-in"
           color="neutral"
           variant="ghost"
           class="w-full"
+          @click="open = true"
         />
       </template>
     </UDashboardSidebar>
