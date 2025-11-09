@@ -1,26 +1,15 @@
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from src.utils import to_camel
 
 
 class RegisterScheme(BaseModel):
     """Base user model in application"""
 
-    first_name: str
-    last_name: str
-    username: str
-    password: str
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-
-
-class LoginScheme(BaseModel):
-    """Model for login"""
-
-    username: str
+    first_name: str | None = None
+    last_name: str | None = None
+    email: EmailStr
     password: str
 
     class Config:
@@ -32,9 +21,9 @@ class AuthenticatedUser(BaseModel):
     """Model for authenticated user"""
 
     id: UUID
-    first_name: str
-    last_name: str
-    username: str
+    first_name: str | None = None
+    last_name: str | None = None
+    email: EmailStr
     is_2fa_enabled: bool
 
     created_at: datetime
@@ -50,34 +39,9 @@ class UserScheme(BaseModel):
     """Base user model in application"""
 
     id: UUID
-    first_name: str
-    last_name: str
-    username: str
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-
-
-class UserUpdateScheme(BaseModel):
-    """Model for user update"""
-
-    first_name: str
-    last_name: str
-    username: str
-
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
-
-
-class UserSearchResponse(BaseModel):
-    """User model from search response"""
-
-    id: UUID
-    first_name: str
-    last_name: str
-    username: str
+    first_name: str | None = None
+    last_name: str | None = None
+    email: EmailStr
 
     class Config:
         alias_generator = to_camel
@@ -85,11 +49,12 @@ class UserSearchResponse(BaseModel):
         from_attributes = True
 
 
-class OTPValidateScheme(BaseModel):
-    """Model for OTP verification"""
+class UserUpdateScheme(BaseModel):
+    """Model for user update"""
 
-    user_id: UUID
-    code: str = Field(..., min_length=6, max_length=6)
+    first_name: str | None = None
+    last_name: str | None = None
+    email: EmailStr
 
     class Config:
         alias_generator = to_camel

@@ -1,10 +1,14 @@
 from datetime import timedelta, datetime, timezone
 from uuid import UUID
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 import jwt
 import pyotp
 from fastapi import HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from pwdlib import PasswordHash
@@ -17,13 +21,11 @@ from src.config import (
     APP_TITLE,
     TOKEN_KEY,
     REFRESH_TOKEN_EXPIRE,
+    MAIL_API_KEY,
+    MAIL_SENDER,
+    APP_UI_URL,
 )
-from src.schemes.user import (
-    UserScheme,
-    RegisterScheme,
-    LoginScheme,
-    OTPValidateScheme,
-)
+from src.schemes.user import UserScheme, RegisterScheme
 from src.models import UserModel
 
 password_hash = PasswordHash.recommended()
@@ -41,19 +43,10 @@ def get_password_hash(password: str) -> str:
     return password_hash.hash(password)
 
 
-def create_token(user_id: UUID) -> str:
+def create_token(user_id: UUID, expire: float = TOKEN_EXPIRE) -> str:
     """Create JWT-token"""
 
-    expire = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE)
-    return jwt.encode(
-        {"id": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM
-    )
-
-
-def create_refresh_token(user_id: UUID) -> str:
-    """Create refresh JWT-token"""
-
-    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE)
+    expire = datetime.now(timezone.utc) + timedelta(seconds=expire)
     return jwt.encode(
         {"id": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM
     )
@@ -89,7 +82,7 @@ async def create_user(session: AsyncSession, user: RegisterScheme) -> UserModel:
     except IntegrityError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username already exists",
+            detail="email already exists",
         ) from exc
 
     return user
@@ -114,13 +107,13 @@ async def get_user(session: AsyncSession, user_id: UUID) -> UserModel:
 
 
 async def user_login(
-    session: AsyncSession, credentials: LoginScheme
+    session: AsyncSession, email: str, password: str
 ) -> UserModel:
     """Login user"""
 
     stmt = (
         select(UserModel)
-        .where(UserModel.username == credentials.username)
+        .where(UserModel.email == email)
         .where(UserModel.is_active)
     )
     user = await session.scalar(stmt)
@@ -131,7 +124,7 @@ async def user_login(
             detail="Invalid credentials",
         )
 
-    if not verify_password(credentials.password, user.password):
+    if not verify_password(password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -143,8 +136,8 @@ async def user_login(
 def set_auth_cookie(response: Response, user_id: UUID) -> None:
     """Set secure auth cookie"""
 
-    token = create_token(user_id)
-    refresh_token = create_refresh_token(user_id)
+    token = create_token(user_id, TOKEN_EXPIRE)
+    refresh_token = create_token(user_id, REFRESH_TOKEN_EXPIRE)
 
     response.set_cookie(
         key=TOKEN_KEY,
@@ -167,8 +160,8 @@ def set_auth_cookie(response: Response, user_id: UUID) -> None:
 def refresh_auth_cookie(response: Response, user_id: UUID) -> None:
     """Refresh auth cookie"""
 
-    token = create_token(user_id)
-    refresh_token = create_refresh_token(user_id)
+    token = create_token(user_id, TOKEN_EXPIRE)
+    refresh_token = create_token(user_id, REFRESH_TOKEN_EXPIRE)
 
     response.set_cookie(
         key=TOKEN_KEY,
@@ -198,32 +191,34 @@ def delete_auth_cookie(response: Response) -> None:
 async def enable_2fa(session: AsyncSession, user_id: UUID) -> str:
     """Enable 2FA for user"""
 
-    user = await get_user(session, user_id)
-    user.is_2fa_enabled = True
-    user.otp_secret = pyotp.random_base32()
-    session.add(user)
+    stmt = (
+        update(UserModel)
+        .where(UserModel.id == user_id)
+        .values(is_2fa_enabled=True, otp_secret=pyotp.random_base32())
+    )
+    result = await session.execute(stmt)
     await session.commit()
-    await session.refresh(user)
+    user: UserModel = result.scalar_one()
 
     totp = pyotp.TOTP(user.otp_secret)
-    otp_uri = totp.provisioning_uri(name=user.username, issuer_name=APP_TITLE)
+    otp_uri = totp.provisioning_uri(name=user.email, issuer_name=APP_TITLE)
 
     return otp_uri
 
 
 async def validate_2fa(
-    session: AsyncSession, verification: OTPValidateScheme
+    session: AsyncSession, user_id: UUID, code: str
 ) -> UserModel:
     """Verify 2FA code"""
 
-    user = await get_user(session, verification.user_id)
+    user = await get_user(session, user_id)
     if not user.is_2fa_enabled or not user.otp_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="2FA is not enabled"
         )
 
     totp = pyotp.TOTP(user.otp_secret)
-    if not totp.verify(verification.code):
+    if not totp.verify(code):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid 2FA code"
         )
@@ -232,13 +227,13 @@ async def validate_2fa(
 
 
 async def search_users(
-    session: AsyncSession, username_contains: str
+    session: AsyncSession, email_contains: str
 ) -> list[UserModel]:
-    """Search users by username substring"""
+    """Search users by email substring"""
 
     stmt = (
         select(UserModel)
-        .where(UserModel.username.contains(username_contains))
+        .where(UserModel.email.contains(email_contains))
         .where(UserModel.is_active)
     )
     result = await session.scalars(stmt)
@@ -256,7 +251,7 @@ async def update_user(
 
     user_instance.first_name = user.first_name
     user_instance.last_name = user.last_name
-    user_instance.username = user.username
+    user_instance.email = user.email
 
     session.add(user_instance)
     await session.commit()
@@ -268,7 +263,60 @@ async def update_user(
 async def delete_user(session: AsyncSession, user_id: UUID) -> None:
     """Soft delete user"""
 
-    user = await get_user(session, user_id)
-    user.is_active = False
-    session.add(user)
+    stmt = (
+        update(UserModel).where(UserModel.id == user_id).values(is_active=False)
+    )
+    session.execute(stmt)
     await session.commit()
+
+
+async def reset_password(
+    session: AsyncSession, user_id: UUID, old: str, new: str
+) -> None:
+    """Reset user password"""
+
+    user_model = await get_user(session, user_id)
+    if not verify_password(old, user_model.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid password",
+        )
+
+    stmt = (
+        update(UserModel)
+        .where(UserModel.id == user_id)
+        .values(password=get_password_hash(new))
+    )
+    await session.execute(stmt)
+    await session.commit()
+
+
+async def forgot_password(session: AsyncSession, email: str) -> None:
+    """Send mail to user for new password"""
+
+    stmt = (
+        select(UserModel)
+        .where(UserModel.email == email)
+        .where(UserModel.is_active)
+    )
+    user_model = await session.scalar(stmt)
+    send_mail(user_model)
+
+
+def send_mail(user: UserModel) -> None:
+    """Send mail to user"""
+
+    token = create_token(user.id)
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Chat: Forgot password"
+    message["From"] = MAIL_SENDER
+    message["To"] = user.email
+
+    text = f"Link to new password: {APP_UI_URL}/?token={token}"
+    message.attach(MIMEText(text, "plain"))
+
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(MAIL_SENDER, MAIL_API_KEY)
+        server.send_message(message)
