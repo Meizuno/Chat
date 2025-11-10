@@ -50,7 +50,7 @@ router.include_router(user.router)
 app.include_router(router)
 
 
-@router.get("/")
+@app.get("/")
 def health():
     """Change if server is alive"""
 

@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
     AsyncEngine,
 )
-from src.config import POSTGRES_URL, DEBUG
+from src.config import DATABASE_URL, DEBUG
 
 
 def get_pg_engine() -> AsyncEngine:
     """Create async PostgreSQL engine"""
 
     return create_async_engine(
-        POSTGRES_URL,
+        DATABASE_URL,
         echo=DEBUG,
         future=True,
         pool_pre_ping=True,

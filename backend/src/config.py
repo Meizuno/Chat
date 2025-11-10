@@ -4,10 +4,10 @@ from fastapi.security import APIKeyCookie
 env = Env()
 env.read_env()
 
-DEBUG = env.bool("DEBUG", True)
+DEBUG = env.bool("DEBUG", False)
 REDIS_URL = env.str("REDIS_URL", "redis://localhost/1")
-POSTGRES_URL = env.str(
-    "POSTGRES_URL", "postgresql+asyncpg://user:1234@localhost/chat"
+DATABASE_URL = env.str(
+    "DATABASE_URL", "postgresql+asyncpg://user:1234@localhost/chat"
 )
 
 APP_TITLE = env.str("APP_TITLE", "ChatApplication")

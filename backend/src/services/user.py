@@ -82,7 +82,7 @@ async def create_user(session: AsyncSession, user: RegisterScheme) -> UserModel:
     except IntegrityError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="email already exists",
+            detail="Email already exists",
         ) from exc
 
     return user
