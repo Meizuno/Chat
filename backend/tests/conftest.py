@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 
 from src.main import app
 from src.config import TOKEN_KEY, MAIL_SENDER
+from src.schemes.user import AuthenticatedUser
+from src.schemes.chat import ChatScheme
 
 
 FIRST_NAME = "Name"
@@ -50,3 +52,19 @@ def refresh_token(login: tuple[str, str]) -> str:
 
     _, refresh_user_token = login
     return refresh_user_token
+
+
+@pytest.fixture
+def user(client: TestClient, token: str) -> AuthenticatedUser:
+    """Get authenticated user"""
+
+    response = client.get("/user/me", cookies={TOKEN_KEY: token})
+    return AuthenticatedUser.model_validate(response.json())
+
+
+@pytest.fixture
+def chat(client: TestClient, token: str) -> ChatScheme:
+    """Get chat"""
+
+    response = client.get("/chat", cookies={TOKEN_KEY: token})
+    return ChatScheme.model_validate(response.json()[0])
