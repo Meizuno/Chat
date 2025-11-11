@@ -43,4 +43,3 @@ refresh_api_key_cookie = APIKeyCookie(name=f"{TOKEN_KEY}_refresh")
 # Mail configuration
 MAIL_SENDER = env.str("MAIL_SENDER", "")
 MAIL_API_KEY = env.str("MAIL_API_KEY", "")
-APP_UI_URL = env.str("APP_UI_URL", "http://localhost:3000")

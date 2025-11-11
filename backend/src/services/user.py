@@ -24,7 +24,6 @@ from src.config import (
     REFRESH_TOKEN_EXPIRE,
     MAIL_API_KEY,
     MAIL_SENDER,
-    APP_UI_URL,
 )
 from src.schemes.user import UserScheme, RegisterScheme
 from src.models import UserModel
@@ -296,7 +295,7 @@ async def reset_password(
         await session.commit()
 
 
-async def forgot_password(email: str) -> None:
+async def forgot_password(email: str, redirect_url: str) -> None:
     """Send mail to user for new password"""
 
     async with db_session() as session:
@@ -307,10 +306,16 @@ async def forgot_password(email: str) -> None:
         )
         user_model = await session.scalar(stmt)
 
-    send_mail(user_model)
+    if user_model is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid email",
+        )
+
+    send_mail(user_model, redirect_url)
 
 
-def send_mail(user: UserModel) -> None:
+def send_mail(user: UserModel, redirect_url: str) -> None:
     """Send mail to user"""
 
     token = create_token(user.id)
@@ -320,7 +325,7 @@ def send_mail(user: UserModel) -> None:
     message["From"] = MAIL_SENDER
     message["To"] = user.email
 
-    text = f"Link to new password: {APP_UI_URL}/?token={token}"
+    text = f"Link to new password: {redirect_url}?token={token}"
     message.attach(MIMEText(text, "plain"))
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:

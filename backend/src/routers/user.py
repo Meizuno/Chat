@@ -73,7 +73,8 @@ async def reset_password(
 @router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
 async def forgot_password(
     email: Annotated[str, Body()],
+    redirect_url: Annotated[str, Body(alias="redirectUrl")],
 ) -> None:
     """Send mail to user for new password"""
 
-    await user_service.forgot_password(email)
+    await user_service.forgot_password(email, redirect_url)
