@@ -37,12 +37,10 @@ class ChatModel(Base):
     __tablename__ = "chat"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    member_1 = Column(
-        UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE")
-    )
-    member_2 = Column(
-        UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE")
-    )
+    name = Column(String)
+
+    is_muted = Column(Boolean, default=False)
+    is_archived = Column(Boolean, default=False)
 
     created_at = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
@@ -51,6 +49,20 @@ class ChatModel(Base):
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
+    )
+
+
+class UserChatModel(Base):
+    """Connection table between User and Chat"""
+
+    __tablename__ = "user_chat"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user = Column(
+        UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE")
+    )
+    chat = Column(
+        UUID(as_uuid=True), ForeignKey("chat.id", ondelete="CASCADE")
     )
 
 

@@ -9,7 +9,6 @@ import jwt
 import pyotp
 from fastapi import HTTPException, Response, status
 from sqlalchemy import select, insert, update
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from pwdlib import PasswordHash
 
