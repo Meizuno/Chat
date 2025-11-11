@@ -54,7 +54,6 @@ class UserUpdateScheme(BaseModel):
 
     first_name: str | None = None
     last_name: str | None = None
-    email: EmailStr
 
     class Config:
         alias_generator = to_camel
