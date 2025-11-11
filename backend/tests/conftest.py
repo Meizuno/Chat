@@ -4,12 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.main import app
-from src.config import TOKEN_KEY
-from src.services.user import create_token
+from src.config import TOKEN_KEY, MAIL_SENDER
+
 
 FIRST_NAME = "Name"
 LAST_NAME = "Surname"
-EMAIL = "user@example.com"
+EMAIL = MAIL_SENDER
 PASSWORD = "pass"
 
 

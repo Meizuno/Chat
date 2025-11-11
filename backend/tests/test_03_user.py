@@ -49,3 +49,26 @@ def test_update_user(client: TestClient, token: str):
     assert response_json["firstName"] == FIRST_NAME
     assert response_json["lastName"] == LAST_NAME
     assert response_json["email"] == EMAIL
+
+
+def test_reset_password(client: TestClient, token: str):
+    """Test update user password"""
+
+    response = client.put(
+        "/user/reset-password",
+        json={"old": PASSWORD, "new": PASSWORD},
+        cookies={TOKEN_KEY: token},
+    )
+
+    assert response.status_code == 204
+
+
+def test_forgot_password(client: TestClient):
+    """Test forgot user password"""
+
+    response = client.post(
+        "/user/forgot-password",
+        json={"email": EMAIL, "redirectUrl": ""},
+    )
+
+    assert response.status_code == 204
