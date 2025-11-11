@@ -1,6 +1,11 @@
+from typing import Generator, Any
+
 import pytest
 from fastapi.testclient import TestClient
+
 from src.main import app
+from src.config import TOKEN_KEY
+from src.services.user import create_token
 
 FIRST_NAME = "Name"
 LAST_NAME = "Surname"
@@ -8,29 +13,40 @@ EMAIL = "user@example.com"
 PASSWORD = "pass"
 
 
-@pytest.fixture(scope="session", autouse=True)
-async def setup():
-    """Setup and cleanup for tests"""
-
-    # Setup
-
-    yield
-
-    # Cleanup
-
-
 @pytest.fixture(scope="session")
-def client() -> TestClient:
+def client() -> Generator[TestClient, Any, None]:
     """Get FastAPI app"""
 
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
-# @pytest.fixture(scope="module")
-# async def client() -> AsyncGenerator[AsyncClient, None]:
-#     """Get FastAPI app"""
+@pytest.fixture
+def login(client: TestClient) -> tuple[str, str]:
+    """Get access and refresh token"""
 
-#     async with AsyncClient(
-#         transport=ASGITransport(app=app), base_url="http://test"
-#     ) as ac:
-#         yield ac
+    response = client.post(
+        "/auth/login",
+        json={
+            "email": EMAIL,
+            "password": PASSWORD,
+        },
+    )
+
+    return response.cookies[TOKEN_KEY], response.cookies[f"{TOKEN_KEY}_refresh"]
+
+
+@pytest.fixture
+def token(login: tuple[str, str]) -> str:
+    """Get access token"""
+
+    access_token, _ = login
+    return access_token
+
+
+@pytest.fixture
+def refresh_token(login: tuple[str, str]) -> str:
+    """Get refresh token"""
+
+    _, refresh_user_token = login
+    return refresh_user_token
