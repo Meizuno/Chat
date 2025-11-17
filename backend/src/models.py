@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, ForeignKey, DateTime, String, Boolean
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -66,19 +66,25 @@ class UserChatModel(Base):
     )
 
 
-# class MessageModel(Base):
-#     """Message model"""
+class MessageModel(Base):
+    """Message model"""
 
-#     __tablename__ = "message"
+    __tablename__ = "message"
 
-#     id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-#     text = Column(Text)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    text = Column(TEXT)
+    user = Column(
+        UUID(as_uuid=True), ForeignKey("user.id", ondelete="CASCADE")
+    )
+    chat = Column(
+        UUID(as_uuid=True), ForeignKey("chat.id", ondelete="CASCADE")
+    )
 
-#     created_at = Column(
-#         DateTime(timezone=True), default=datetime.now(timezone.utc)
-#     )
-#     updated_at = Column(
-#         DateTime(timezone=True),
-#         default=datetime.now(timezone.utc),
-#         onupdate=datetime.now(timezone.utc),
-#     )
+    created_at = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+    )

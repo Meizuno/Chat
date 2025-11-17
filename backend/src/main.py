@@ -4,7 +4,7 @@ from fastapi import FastAPI, APIRouter
 from sqlalchemy import text
 
 from src.config import BASE_URL, APP_TITLE, redis_client, engine
-from src.routers import auth, user, chat
+from src.routers import auth, user, chat, message
 from src.logger import logger
 from src.models import Base
 
@@ -42,6 +42,7 @@ router = APIRouter(prefix=BASE_URL)
 router.include_router(auth.router)
 router.include_router(user.router)
 router.include_router(chat.router)
+router.include_router(message.router)
 
 
 @router.get("/")
