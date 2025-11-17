@@ -7,13 +7,15 @@ from email.mime.multipart import MIMEMultipart
 
 import jwt
 import pyotp
-from fastapi import HTTPException, Response, status
+from fastapi import HTTPException, Response, status, Depends
 from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError
 from pwdlib import PasswordHash
 
 from src.config import (
     db_session,
+    api_key_cookie,
+    refresh_api_key_cookie,
     DEBUG,
     SECRET_KEY,
     TOKEN_EXPIRE,
@@ -65,6 +67,22 @@ def decode_token(token: str) -> UUID:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         ) from exc
+
+
+def refresh_authenticated_user(
+    refresh_token: str = Depends(refresh_api_key_cookie),
+) -> UUID:
+    """Get authenticated user id from token"""
+
+    return decode_token(refresh_token)
+
+
+def authenticated_user(
+    refresh_token: str = Depends(api_key_cookie),
+) -> UUID:
+    """Get authenticated user id from token"""
+
+    return decode_token(refresh_token)
 
 
 async def create_user(user: RegisterScheme) -> UserModel:
@@ -272,9 +290,7 @@ async def delete_user(user_id: UUID) -> None:
         await session.commit()
 
 
-async def reset_password(
-    user_id: UUID, old: str, new: str
-) -> None:
+async def reset_password(user_id: UUID, old: str, new: str) -> None:
     """Reset user password"""
 
     user_model = await get_user(user_id)

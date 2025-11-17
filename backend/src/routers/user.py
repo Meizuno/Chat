@@ -1,4 +1,5 @@
 from typing import List, Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Response, Depends, Body, status
 
@@ -11,18 +12,17 @@ router = APIRouter(prefix="/user", tags=["user"])
 
 @router.get("/me")
 async def me(
-    token: str = Depends(api_key_cookie),
+    user_id: UUID = Depends(user_service.authenticated_user),
 ) -> user_scheme.AuthenticatedUser:
     """Read current user"""
 
-    user_id = user_service.decode_token(token)
     user_instance = await user_service.get_user(user_id)
     return user_scheme.AuthenticatedUser.model_validate(user_instance)
 
 
 @router.get("/")
 async def read_users(
-    _: str = Depends(api_key_cookie),
+    _: UUID = Depends(user_service.authenticated_user),
     email_contains: str = "",
 ) -> List[user_scheme.UserScheme]:
     """Get list of users whose emails contain the given substring"""
@@ -37,24 +37,21 @@ async def read_users(
 @router.put("/")
 async def update_user(
     user_data: user_scheme.UserUpdateScheme,
-    token: str = Depends(api_key_cookie),
+    user_id: UUID = Depends(user_service.authenticated_user),
 ) -> user_scheme.AuthenticatedUser:
     """Update user information"""
 
-    auth_user_id = user_service.decode_token(token)
-    user_instance = await user_service.update_user(auth_user_id, user_data)
+    user_instance = await user_service.update_user(user_id, user_data)
     return user_scheme.AuthenticatedUser.model_validate(user_instance)
 
 
 @router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
-    response: Response,
-    token: str = Depends(api_key_cookie),
+    response: Response, user_id: UUID = Depends(user_service.authenticated_user)
 ) -> None:
     """Delete user"""
 
-    auth_user_id = user_service.decode_token(token)
-    await user_service.delete_user(auth_user_id)
+    await user_service.delete_user(user_id)
     user_service.delete_auth_cookie(response)
 
 
@@ -62,11 +59,10 @@ async def delete_user(
 async def reset_password(
     old: Annotated[str, Body()],
     new: Annotated[str, Body()],
-    token: str = Depends(api_key_cookie),
+    user_id: UUID = Depends(user_service.authenticated_user),
 ) -> None:
     """Reset user password"""
 
-    user_id = user_service.decode_token(token)
     await user_service.reset_password(user_id, old, new)
 
 

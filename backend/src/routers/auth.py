@@ -47,21 +47,19 @@ async def login(
 @router.post("/refresh", status_code=status.HTTP_204_NO_CONTENT)
 async def refresh_session(
     response: Response,
-    refresh_token: str = Depends(refresh_api_key_cookie),
+    user_id: UUID = Depends(user_service.refresh_authenticated_user),
 ) -> None:
     """Refresh auth token"""
 
-    user_id = user_service.decode_token(refresh_token)
     user_service.refresh_auth_cookie(response, user_id)
 
 
 @router.post("/2fa")
 async def enable_2fa(
-    token: str = Depends(api_key_cookie)
+    user_id: UUID = Depends(user_service.authenticated_user)
 ):
     """Generate QR-code for enabling 2FA"""
 
-    user_id = user_service.decode_token(token)
     otp_uri = await user_service.enable_2fa(user_id)
 
     qr = qrcode.make(otp_uri)

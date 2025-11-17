@@ -1,10 +1,11 @@
 from typing import Sequence, List
 from uuid import UUID
 
-from sqlalchemy import select, insert, update, delete
+from sqlalchemy import select, insert, update, delete, exists
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request, Depends
 
+from src.services.user import authenticated_user
 from src.schemes.chat import ChatInputScheme
 from src.models import ChatModel, UserChatModel
 from src.config import db_session
@@ -89,7 +90,38 @@ async def read_chats(user_id: UUID) -> Sequence[ChatModel]:
             select(ChatModel)
             .join(UserChatModel, ChatModel.id == UserChatModel.chat)
             .where(UserChatModel.user == user_id)
-            .order_by(ChatModel.updated_at.desc())
         )
         result = await session.scalars(stmt)
         return result.all()
+
+
+async def user_in_chat(user_id: UUID, chat_id: UUID) -> bool:
+    """Check if user participates in chat"""
+
+    async with db_session() as session:
+        stmt = select(
+            exists().where(
+                UserChatModel.user == user_id, UserChatModel.chat == chat_id
+            )
+        )
+        result = await session.scalar(stmt)
+        return bool(result)
+
+
+async def check_chat_permission(
+    request: Request,
+    user_id: UUID = Depends(authenticated_user)
+) -> None:
+    """Check user chat permission"""
+
+    chat_id = request.path_params.get("chat_id")
+    if chat_id is None:
+        return
+
+    chat_id = UUID(chat_id)
+    has_access = await user_in_chat(user_id, chat_id)
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this chat",
+        )
