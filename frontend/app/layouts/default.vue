@@ -71,7 +71,16 @@
       </template>
 
       <template #footer="{ collapsed }">
+        <UUser
+          v-if="isUserAuthenticated"
+          :name="`${user?.firstName} ${user?.lastName}`"
+          :description="user?.email"
+          :avatar="{
+            icon: 'i-lucide-image'
+          }"
+        />
         <UButton
+          v-else
           to="/auth/login"
           :label="collapsed ? '' : 'Login'"
           icon="i-lucide-log-in"
@@ -108,6 +117,11 @@
 
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
+import { useUserStore } from '~/stores/userStore'
+
+const userStore = useUserStore()
+const { isUserAuthenticated } = userStore
+const { user } = storeToRefs(userStore)
 
 const items = ref<NavigationMenuItem[][]>([
   [

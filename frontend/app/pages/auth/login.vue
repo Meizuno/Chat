@@ -74,27 +74,12 @@ const schema = z.object({
 type Schema = z.output<typeof schema>
 
 const authStore = useAuthStore()
-const { signInWithEmailAndPassword } = authStore
-const { displayError } = useDisplayMessages()
+const { login } = authStore
 
 const loading = ref(false)
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const { email, password } = payload.data
   loading.value = true
-  const { success, error } = await signInWithEmailAndPassword({
-    email,
-    password
-  })
-
-  if (success) {
-    await navigateTo('/')
-  } else {
-    const errorMessage = (error as Error)?.message
-    displayError({
-      title: 'Login failed',
-      description: errorMessage
-    })
-  }
+  await login(payload.data)
   loading.value = false
 }
 </script>

@@ -1,12 +1,14 @@
-export const useApi = () => {
+import type { UseFetchOptions } from '#app'
+import { defu } from 'defu'
+
+export function useApiFetch<T>(url: string, options: UseFetchOptions<T> = {}) {
   const config = useRuntimeConfig()
   const { displayError } = useDisplayMessages()
 
-  const userStore = useUserStore()
-  const { user } = storeToRefs(userStore)
-  const token = user?.value.id
+  const authStore = useAuthStore()
+  const { token } = storeToRefs(authStore)
 
-  return $fetch.create({
+  const defaults: UseFetchOptions<T> = {
     baseURL: config.public.apiBaseURL,
     onRequest({ options }) {
       if (token) {
@@ -15,19 +17,22 @@ export const useApi = () => {
           Authorization: `Bearer ${token}`
         }
       }
-      if (error) {
-        displayError({
-          description: error.message
-        })
-      }
     },
     onResponseError({ response }) {
-      if (response.status === 401) {
+      const status = response.status
+      const message =
+        (response._data as any)?.detail || 'Unexpected server error'
+
+      if (status === 401) {
         navigateTo('/auth/login')
       }
       displayError({
-        description: response._data?.message || 'An error occurred'
+        description: message || 'An error occurred'
       })
     }
-  })
+  }
+
+  const params = defu(options, defaults)
+
+  return useFetch<T>(url, params)
 }

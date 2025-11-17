@@ -1,68 +1,56 @@
-import type { User } from '@/types'
+import type {
+  User,
+  ResetPasswordRequest,
+  ForgotPasswordRequest
+} from '@/types/user'
 
-export const useUserStore = defineStore('user', () => {
-  const api = useApi()
-
-  // State
-
+export const useUserStore = defineStore('userStore', () => {
   const user = ref<User | null>(null)
+  const { displaySuccess } = useDisplayMessages()
 
-  // Getters
+  const setUser = (currentUser: User | null) => {
+    user.value = currentUser
+  }
 
   const isUserAuthenticated = computed(() => !!user.value)
 
-  // Actions
-
-  const updateUser = (newUser: User | null) => {
-    user.value = newUser
-  }
-
-  interface ForgotPasswordParams {
-    email: string
-    redirectTo: string
-  }
-  const forgetPassword = async ({
-    email,
-    redirectTo
-  }: ForgotPasswordParams) => {
-    try {
-      await api('/chat/user/forgot-password', {
-        method: 'POST',
-        body: { email, redirectTo }
-      })
-      return { success: true }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error))
+  const forgotPassword = async (userData: ForgotPasswordRequest) => {
+    const { data } = await useApiFetch('/messenger/user/forgot-password', {
+      method: 'POST',
+      body: {
+        ...userData,
+        redirectTo: '/auth/reset'
       }
+    })
+    if (data.value) {
+      displaySuccess({
+        title: 'Password reset email sent',
+        description: 'Please check your email for the password reset link.'
+      })
     }
+    navigateTo('/auth/login')
   }
 
-  interface ResetPasswordParams {
-    newPassword: string
-    token: string
-  }
-  const resetPassword = async ({ newPassword, token }: ResetPasswordParams) => {
-    try {
-      await api('/chat/user/reset-password', {
-        method: 'PUT',
-        body: { password: newPassword, token }
+  const resetPassword = async (userData: ResetPasswordRequest) => {
+    const { data } = await useApiFetch('/messenger/user/reset-password', {
+      method: 'POST',
+      body: userData
+    })
+    if (data.value) {
+      displaySuccess({
+        title: 'Password reset successful',
+        description:
+          'Your password has been reset. Please sign in with your new password.'
       })
-      return { success: true }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error))
-      }
     }
+    navigateTo('/auth/login')
   }
 
   return {
     user,
+    setUser,
     isUserAuthenticated,
-    forgetPassword,
-    resetPassword,
-    updateUser
+    forgotPassword,
+    resetPassword
   }
 })
