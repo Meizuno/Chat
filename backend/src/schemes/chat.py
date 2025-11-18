@@ -4,11 +4,13 @@ from pydantic import BaseModel
 from src.utils import to_camel
 
 
-class MessageScheme(BaseModel):
-    """Base message model"""
+class ChatScheme(BaseModel):
+    """Base chat model"""
 
     id: UUID
-    text: str
+    name: str
+    is_muted: bool
+    is_archived: bool
 
     created_at: datetime
     updated_at: datetime
@@ -19,10 +21,12 @@ class MessageScheme(BaseModel):
         from_attributes = True
 
 
-class MessageInputScheme(BaseModel):
-    """Base model for create or update message"""
+class ChatInputScheme(BaseModel):
+    """Base model for create or update chat"""
 
-    text: str
+    name: str
+    is_muted: bool = False
+    is_archived: bool = False
 
     class Config:
         alias_generator = to_camel

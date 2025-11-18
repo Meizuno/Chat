@@ -7,13 +7,15 @@ from email.mime.multipart import MIMEMultipart
 
 import jwt
 import pyotp
-from fastapi import HTTPException, Response, status
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, Response, status, Depends
+from sqlalchemy import select, insert, update
 from sqlalchemy.exc import IntegrityError
 from pwdlib import PasswordHash
 
 from src.config import (
+    db_session,
+    api_key_cookie,
+    refresh_api_key_cookie,
     RELEASE,
     SECRET_KEY,
     TOKEN_EXPIRE,
@@ -23,7 +25,6 @@ from src.config import (
     REFRESH_TOKEN_EXPIRE,
     MAIL_API_KEY,
     MAIL_SENDER,
-    APP_UI_URL,
 )
 from src.schemes.user import UserScheme, RegisterScheme
 from src.models import UserModel
@@ -68,35 +69,53 @@ def decode_token(token: str) -> UUID:
         ) from exc
 
 
-async def create_user(session: AsyncSession, user: RegisterScheme) -> UserModel:
+def refresh_authenticated_user(
+    refresh_token: str = Depends(refresh_api_key_cookie),
+) -> UUID:
+    """Get authenticated user id from token"""
+
+    return decode_token(refresh_token)
+
+
+def authenticated_user(
+    refresh_token: str = Depends(api_key_cookie),
+) -> UUID:
+    """Get authenticated user id from token"""
+
+    return decode_token(refresh_token)
+
+
+async def create_user(user: RegisterScheme) -> UserModel:
     """Create user instance"""
 
     user_dict = user.model_dump()
     user_dict["password"] = get_password_hash(user_dict["password"])
-    user = UserModel(**user_dict)
 
-    try:
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="email already exists",
-        ) from exc
+    async with db_session() as session:
+        stmt = insert(UserModel).values(**user_dict).returning(UserModel)
+        try:
+            result = await session.execute(stmt)
+            await session.commit()
+            user_instance = result.scalar()
+        except IntegrityError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already exists",
+            ) from exc
 
-    return user
+    return user_instance
 
 
-async def get_user(session: AsyncSession, user_id: UUID) -> UserModel:
+async def get_user(user_id: UUID) -> UserModel:
     """Get user instance"""
 
-    stmt = (
-        select(UserModel)
-        .where(UserModel.id == user_id)
-        .where(UserModel.is_active)
-    )
-    user = await session.scalar(stmt)
+    async with db_session() as session:
+        stmt = (
+            select(UserModel)
+            .where(UserModel.id == user_id)
+            .where(UserModel.is_active)
+        )
+        user = await session.scalar(stmt)
 
     if user is None:
         raise HTTPException(
@@ -106,17 +125,16 @@ async def get_user(session: AsyncSession, user_id: UUID) -> UserModel:
     return user
 
 
-async def user_login(
-    session: AsyncSession, email: str, password: str
-) -> UserModel:
+async def user_login(email: str, password: str) -> UserModel:
     """Login user"""
 
-    stmt = (
-        select(UserModel)
-        .where(UserModel.email == email)
-        .where(UserModel.is_active)
-    )
-    user = await session.scalar(stmt)
+    async with db_session() as session:
+        stmt = (
+            select(UserModel)
+            .where(UserModel.email == email)
+            .where(UserModel.is_active)
+        )
+        user = await session.scalar(stmt)
 
     if user is None:
         raise HTTPException(
@@ -188,17 +206,18 @@ def delete_auth_cookie(response: Response) -> None:
     response.delete_cookie(key=f"{TOKEN_KEY}_refresh")
 
 
-async def enable_2fa(session: AsyncSession, user_id: UUID) -> str:
+async def enable_2fa(user_id: UUID) -> str:
     """Enable 2FA for user"""
 
-    stmt = (
-        update(UserModel)
-        .where(UserModel.id == user_id)
-        .values(is_2fa_enabled=True, otp_secret=pyotp.random_base32())
-    )
-    result = await session.execute(stmt)
-    await session.commit()
-    user: UserModel = result.scalar_one()
+    async with db_session() as session:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(is_2fa_enabled=True, otp_secret=pyotp.random_base32())
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        user: UserModel = result.scalar_one()
 
     totp = pyotp.TOTP(user.otp_secret)
     otp_uri = totp.provisioning_uri(name=user.email, issuer_name=APP_TITLE)
@@ -206,12 +225,10 @@ async def enable_2fa(session: AsyncSession, user_id: UUID) -> str:
     return otp_uri
 
 
-async def validate_2fa(
-    session: AsyncSession, user_id: UUID, code: str
-) -> UserModel:
+async def validate_2fa(user_id: UUID, code: str) -> UserModel:
     """Verify 2FA code"""
 
-    user = await get_user(session, user_id)
+    user = await get_user(user_id)
     if not user.is_2fa_enabled or not user.otp_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="2FA is not enabled"
@@ -226,84 +243,94 @@ async def validate_2fa(
     return user
 
 
-async def search_users(
-    session: AsyncSession, email_contains: str
-) -> list[UserModel]:
+async def search_users(email_contains: str) -> list[UserModel]:
     """Search users by email substring"""
 
-    stmt = (
-        select(UserModel)
-        .where(UserModel.email.contains(email_contains))
-        .where(UserModel.is_active)
-    )
-    result = await session.scalars(stmt)
-    return result.all()
+    async with db_session() as session:
+        stmt = (
+            select(UserModel)
+            .where(UserModel.email.contains(email_contains))
+            .where(UserModel.is_active)
+        )
+        result = await session.scalars(stmt)
+        return result.all()
 
 
 async def update_user(
-    session: AsyncSession,
     user_id: UUID,
     user: UserScheme,
 ) -> UserModel:
     """Update user information"""
 
-    user_instance = await get_user(session, user_id)
+    async with db_session() as session:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(**user.model_dump())
+            .returning(UserModel)
+        )
 
-    user_instance.first_name = user.first_name
-    user_instance.last_name = user.last_name
-    user_instance.email = user.email
-
-    session.add(user_instance)
-    await session.commit()
-    await session.refresh(user_instance)
+        result = await session.execute(stmt)
+        await session.commit()
+        user_instance = result.scalar()
 
     return user_instance
 
 
-async def delete_user(session: AsyncSession, user_id: UUID) -> None:
+async def delete_user(user_id: UUID) -> None:
     """Soft delete user"""
 
-    stmt = (
-        update(UserModel).where(UserModel.id == user_id).values(is_active=False)
-    )
-    session.execute(stmt)
-    await session.commit()
+    async with db_session() as session:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(is_active=False)
+        )
+        session.execute(stmt)
+        await session.commit()
 
 
-async def reset_password(
-    session: AsyncSession, user_id: UUID, old: str, new: str
-) -> None:
+async def reset_password(user_id: UUID, old: str, new: str) -> None:
     """Reset user password"""
 
-    user_model = await get_user(session, user_id)
+    user_model = await get_user(user_id)
     if not verify_password(old, user_model.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid password",
         )
 
-    stmt = (
-        update(UserModel)
-        .where(UserModel.id == user_id)
-        .values(password=get_password_hash(new))
-    )
-    await session.execute(stmt)
-    await session.commit()
+    async with db_session() as session:
+        stmt = (
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(password=get_password_hash(new))
+        )
+        await session.execute(stmt)
+        await session.commit()
 
 
-async def forgot_password(session: AsyncSession, email: str) -> None:
+async def forgot_password(email: str, redirect_url: str) -> None:
     """Send mail to user for new password"""
 
-    stmt = (
-        select(UserModel)
-        .where(UserModel.email == email)
-        .where(UserModel.is_active)
-    )
-    user_model = await session.scalar(stmt)
-    send_mail(user_model)
+    async with db_session() as session:
+        stmt = (
+            select(UserModel)
+            .where(UserModel.email == email)
+            .where(UserModel.is_active)
+        )
+        user_model = await session.scalar(stmt)
+
+    if user_model is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid email",
+        )
+
+    send_mail(user_model, redirect_url)
 
 
-def send_mail(user: UserModel) -> None:
+def send_mail(user: UserModel, redirect_url: str) -> None:
     """Send mail to user"""
 
     token = create_token(user.id)
@@ -313,7 +340,7 @@ def send_mail(user: UserModel) -> None:
     message["From"] = MAIL_SENDER
     message["To"] = user.email
 
-    text = f"Link to new password: {APP_UI_URL}/?token={token}"
+    text = f"Link to new password: {redirect_url}?token={token}"
     message.attach(MIMEText(text, "plain"))
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:

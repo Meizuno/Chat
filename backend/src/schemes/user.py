@@ -1,6 +1,6 @@
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr
 from src.utils import to_camel
 
 
@@ -54,7 +54,6 @@ class UserUpdateScheme(BaseModel):
 
     first_name: str | None = None
     last_name: str | None = None
-    email: EmailStr
 
     class Config:
         alias_generator = to_camel
