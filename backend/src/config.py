@@ -37,7 +37,7 @@ ALGORITHM = env.str("ALGORITHM", "HS256")
 # Authorization configuration
 TOKEN_EXPIRE = env.int("TOKEN_EXPIRE", 900)  # in seconds
 REFRESH_TOKEN_EXPIRE = env.int("REFRESH_TOKEN_EXPIRE", 21600)  # in seconds
-TOKEN_KEY = env.str("TOKEN_KEY", "session")
+TOKEN_KEY = env.str("TOKEN_KEY", "sid")
 api_key_cookie = APIKeyCookie(name=TOKEN_KEY)
 refresh_api_key_cookie = APIKeyCookie(name=f"{TOKEN_KEY}_refresh")
 
