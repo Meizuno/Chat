@@ -11,6 +11,7 @@ env = Env()
 env.read_env()
 
 DEBUG = env.bool("DEBUG", False)
+RELEASE = not DEBUG
 
 # Redis configuration
 REDIS_URL = env.str("REDIS_URL", "redis://localhost/0")

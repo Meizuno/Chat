@@ -16,7 +16,7 @@ from src.config import (
     db_session,
     api_key_cookie,
     refresh_api_key_cookie,
-    DEBUG,
+    RELEASE,
     SECRET_KEY,
     TOKEN_EXPIRE,
     ALGORITHM,
@@ -163,7 +163,7 @@ def set_auth_cookie(response: Response, user_id: UUID) -> None:
         httponly=True,
         max_age=TOKEN_EXPIRE,
         samesite="lax",
-        secure=DEBUG,
+        secure=RELEASE,
     )
     response.set_cookie(
         key=f"{TOKEN_KEY}_refresh",
@@ -171,7 +171,7 @@ def set_auth_cookie(response: Response, user_id: UUID) -> None:
         httponly=True,
         max_age=REFRESH_TOKEN_EXPIRE,
         samesite="lax",
-        secure=DEBUG,
+        secure=RELEASE,
     )
 
 
@@ -187,7 +187,7 @@ def refresh_auth_cookie(response: Response, user_id: UUID) -> None:
         httponly=True,
         max_age=TOKEN_EXPIRE,
         samesite="lax",
-        secure=DEBUG,
+        secure=RELEASE,
     )
     response.set_cookie(
         key=f"{TOKEN_KEY}_refresh",
@@ -195,7 +195,7 @@ def refresh_auth_cookie(response: Response, user_id: UUID) -> None:
         httponly=True,
         max_age=REFRESH_TOKEN_EXPIRE,
         samesite="lax",
-        secure=DEBUG,
+        secure=RELEASE,
     )
 
 
