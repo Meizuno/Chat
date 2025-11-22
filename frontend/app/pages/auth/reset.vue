@@ -67,14 +67,13 @@ const schema = z
 
 type Schema = z.output<typeof schema>
 
-const authStore = useAuthStore()
-const { resetPassword } = authStore
+const userStore = useUserStore()
+const { forgotPassword } = userStore
 const { displayError, displaySuccess } = useDisplayMessages()
 
 const loading = ref(false)
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const { password } = payload.data
   const token = route.query.token as string
 
   if (!token) {
@@ -86,26 +85,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   }
 
   loading.value = true
-  const { success, error } = await resetPassword({
-    newPassword: password,
-    token
-  })
-  if (success) {
-    displaySuccess({
-      title: 'Password reset successful',
-      description:
-        'Your password has been reset. Please sign in with your new password.'
-    })
-    await navigateTo('/auth/login')
-  } else {
-    const errorMessage =
-      (error as Error)?.message ||
-      'An unknown error occurred. Please try again later.'
-    displayError({
-      title: 'Password reset failed',
-      description: errorMessage
-    })
-  }
+  await forgotPassword(payload.data)
   loading.value = false
 }
 </script>

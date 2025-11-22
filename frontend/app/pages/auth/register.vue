@@ -26,6 +26,7 @@
 import type { FormSubmitEvent } from '#ui/types'
 import * as z from 'zod'
 import { useDisplayMessages } from '~/composables/useDisplayMessages'
+import { useTestStore } from '~/stores/testStore'
 
 definePageMeta({
   layout: 'auth'
@@ -42,14 +43,16 @@ const fields = [
     type: 'text' as const,
     label: 'First name',
     placeholder: 'Enter your first name',
-    required: true
+    required: true,
+    defaultValue: 'John'
   },
   {
     name: 'lastName',
     type: 'text' as const,
     label: 'Last name',
     placeholder: 'Enter your last name',
-    required: true
+    required: true,
+    defaultValue: 'Smith'
   },
   {
     name: 'email',
@@ -81,32 +84,13 @@ const schema = z.object({
 type Schema = z.output<typeof schema>
 
 const authStore = useAuthStore()
-const { signUp } = authStore
-const { displayError } = useDisplayMessages()
+const { register } = authStore
 
 const loading = ref(false)
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const { firstName, lastName, email, password } = payload.data
   loading.value = true
-  const { success, error } = await signUp({
-    firstName,
-    lastName,
-    email,
-    password
-  })
-
-  if (success) {
-    await navigateTo('/')
-  } else {
-    const errorMessage =
-      (error as Error)?.message ||
-      'An unknown error occurred. Please try again later.'
-    displayError({
-      title: 'Registration failed',
-      description: errorMessage
-    })
-  }
+  await register(payload.data)
   loading.value = false
 }
 </script>

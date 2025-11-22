@@ -1,117 +1,69 @@
+import type { RegisterRequest, LoginRequest } from '@/types/auth'
+
 export const useAuthStore = defineStore('authStore', () => {
-  const api = useApi()
-
   const userStore = useUserStore()
-  const { updateUser } = userStore
+  const { setUser } = userStore
+  const token = ref<string | null>(null)
+  const { displaySuccess } = useDisplayMessages()
 
-  // Actions
-
-  interface SignInParams {
-    email: string
-    password: string
-  }
-  const signInWithEmailAndPassword = async ({
-    email,
-    password
-  }: SignInParams) => {
-    try {
-      const response = await api('/chat/auth/login', {
-        method: 'POST',
-        body: {
-          email,
-          password
-        }
+  const register = async (userData: RegisterRequest) => {
+    const { data } = await useApiFetch('/messenger/auth/register', {
+      method: 'POST',
+      body: userData
+    })
+    if (data.value) {
+      setUser(data.value)
+      displaySuccess({
+        description: 'Registration successful'
       })
-      updateUser(response.user)
-      return { success: true }
-    } catch (error) {
-      const message =
-        error.statusCode === 401
-          ? 'Invalid email or password'
-          : error.message || 'Login failed'
-      error.value = message
-      return { success: false, error: message }
     }
+    navigateTo('/')
   }
 
-  interface SignUpParams {
-    firstName: string
-    lastName: string
-    email: string
-    password: string
-  }
-  const signUp = async ({
-    firstName,
-    lastName,
-    email,
-    password
-  }: SignUpParams) => {
-    try {
-      const response = await api('/chat/auth/register', {
-        method: 'POST',
-        body: {
-          firstName,
-          lastName,
-          email,
-          password
-        },
-        headers: {
-          Authorization: null
-        }
+  const login = async (userData: LoginRequest) => {
+    const { data } = await useApiFetch('/messenger/auth/login', {
+      method: 'POST',
+      body: userData
+    })
+    if (data.value) {
+      setUser(data.value)
+      displaySuccess({
+        description: 'Login successful'
       })
-      updateUser(response.user)
-      return { success: true }
-    } catch (error) {
-      const message =
-        error.statusCode === 401
-          ? 'Invalid email or password'
-          : error.message || 'Login failed'
-      error.value = message
-      return { success: false, error: message }
     }
+    navigateTo('/')
   }
 
-  const signOut = async () => {
-    try {
-      await api('/chat/auth/logout', {
-        method: 'POST'
+  const logout = async () => {
+    const { data } = await useApiFetch('/messenger/auth/logout', {
+      method: 'POST'
+    })
+    if (data.value) {
+      setUser(null)
+      displaySuccess({
+        description: 'Logout successful'
       })
-      updateUser(null)
-      return { success: true }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error))
-      }
     }
+    navigateTo('/auth/login')
   }
 
-  const refreshToken = async (): Promise<{
-    success: boolean
-    token?: string
-    error?: Error
-  }> => {
-    try {
-      const response = await api<{ token: string }>('/chat/auth/refresh', {
-        method: 'POST'
+  const refresh = async () => {
+    const { data } = await useApiFetch('/messenger/auth/refresh', {
+      method: 'POST'
+    })
+    if (data.value) {
+      displaySuccess({
+        description: 'Logout successful'
       })
-      return {
-        success: true,
-        token: response.token
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error : new Error('Failed to refresh token')
-      }
     }
+    navigateTo('/auth/login')
   }
 
   return {
-    signInWithEmailAndPassword,
-    signUp,
-    signOut,
-    refreshToken
+    token,
+    register,
+    login,
+    logout,
+    refresh
   }
 })

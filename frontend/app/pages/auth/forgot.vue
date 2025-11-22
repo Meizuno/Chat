@@ -25,7 +25,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '#ui/types'
 import * as z from 'zod'
-import { useDisplayMessages } from '~/composables/useDisplayMessages'
 
 definePageMeta({
   layout: 'auth'
@@ -52,36 +51,14 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>
 
-const authStore = useAuthStore()
-const { forgetPassword } = authStore
-const { displayError, displaySuccess } = useDisplayMessages()
+const userStore = useUserStore()
+const { forgotPassword } = userStore
 
 const loading = ref(false)
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
-  const { email } = payload.data
   loading.value = true
-
-  const { success, error } = await forgetPassword({
-    email,
-    redirectTo: `/auth/reset`
-  })
-
-  if (success) {
-    displaySuccess({
-      title: 'Password reset email sent',
-      description: 'Please check your email for the password reset link.'
-    })
-  } else {
-    const errorMessage =
-      (error as Error)?.message ||
-      'An unknown error occurred. Please try again later.'
-
-    displayError({
-      title: 'Password reset failed',
-      description: errorMessage
-    })
-  }
+  await forgotPassword(payload.data)
   loading.value = false
 }
 </script>
