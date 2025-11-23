@@ -4,9 +4,9 @@
       id="default"
       v-model:open="open"
       :min-size="12"
-      collapsible
       resizable
       class="bg-elevated/50"
+      :ui="{ footer: 'border-t border-default' }"
     >
       <template #header="{ collapsed }">
         <NuxtLink
@@ -75,10 +75,11 @@
           v-if="isUserAuthenticated"
           :name="`${user?.firstName} ${user?.lastName}`"
           :description="user?.email"
-          :avatar="{
-            icon: 'i-lucide-image'
-          }"
-        />
+        >
+          <template #avatar>
+            <UAvatar :alt="`${user?.firstName} ${user?.lastName}`" />
+          </template>
+        </UUser>
         <UButton
           v-else
           to="/auth/login"
@@ -98,10 +99,6 @@
           title="Page"
           :ui="{ right: 'gap-3' }"
         >
-          <template #leading>
-            <UDashboardSidebarCollapse variant="link" />
-          </template>
-
           <template #right>
             <UColorModeButton variant="link" />
           </template>
