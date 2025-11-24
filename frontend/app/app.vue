@@ -10,6 +10,8 @@
 
 <script setup lang="ts">
 const { setSeo } = useSeo()
+const { authCheck } = useAuthCheck()
 
 setSeo()
+authCheck()
 </script>

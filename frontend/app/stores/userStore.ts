@@ -12,6 +12,17 @@ export const useUserStore = defineStore('userStore', () => {
     user.value = currentUser
   }
 
+  const me = async () => {
+    const { data } = await useApiFetch('/messenger/user/me', {
+      method: 'GET'
+    })
+    if (data.value) {
+      setUser(data.value as User)
+    } else {
+      navigateTo('/auth/login')
+    }
+  }
+
   const isUserAuthenticated = computed(() => !!user.value)
 
   const forgotPassword = async (userData: ForgotPasswordRequest) => {
@@ -48,6 +59,7 @@ export const useUserStore = defineStore('userStore', () => {
 
   return {
     user,
+    me,
     setUser,
     isUserAuthenticated,
     forgotPassword,
