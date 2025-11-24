@@ -160,7 +160,7 @@ def set_auth_cookie(response: Response, user_id: UUID) -> None:
     response.set_cookie(
         key=TOKEN_KEY,
         value=token,
-        httponly=True,
+        httponly=False,
         max_age=TOKEN_EXPIRE,
         samesite="lax",
         secure=RELEASE,
@@ -168,7 +168,7 @@ def set_auth_cookie(response: Response, user_id: UUID) -> None:
     response.set_cookie(
         key=f"{TOKEN_KEY}_refresh",
         value=refresh_token,
-        httponly=True,
+        httponly=False,
         max_age=REFRESH_TOKEN_EXPIRE,
         samesite="lax",
         secure=RELEASE,
@@ -184,7 +184,7 @@ def refresh_auth_cookie(response: Response, user_id: UUID) -> None:
     response.set_cookie(
         key=TOKEN_KEY,
         value=token,
-        httponly=True,
+        httponly=False,
         max_age=TOKEN_EXPIRE,
         samesite="lax",
         secure=RELEASE,
@@ -192,7 +192,7 @@ def refresh_auth_cookie(response: Response, user_id: UUID) -> None:
     response.set_cookie(
         key=f"{TOKEN_KEY}_refresh",
         value=refresh_token,
-        httponly=True,
+        httponly=False,
         max_age=REFRESH_TOKEN_EXPIRE,
         samesite="lax",
         secure=RELEASE,
