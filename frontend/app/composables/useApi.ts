@@ -5,18 +5,10 @@ export function useApiFetch<T>(url: string, options: UseFetchOptions<T> = {}) {
   const config = useRuntimeConfig()
   const { displayError } = useDisplayMessages()
 
-  const authStore = useAuthStore()
-  const { token } = storeToRefs(authStore)
-
   const defaults: UseFetchOptions<T> = {
     baseURL: config.public.apiBaseURL,
     onRequest({ options }) {
-      if (token) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${token}`
-        }
-      }
+      options.credentials = 'include'
     },
     onResponseError({ response }) {
       const status = response.status
