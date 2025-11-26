@@ -35,7 +35,7 @@ async def read_message(message_id: UUID) -> message_scheme.MessageScheme:
     return message_scheme.MessageScheme.model_validate(message)
 
 
-@router.post("/")
+@router.post("")
 async def create_message(
     chat_id: UUID,
     message: message_scheme.MessageInputScheme,

@@ -43,16 +43,16 @@ router.include_router(auth.router)
 router.include_router(user.router)
 router.include_router(chat.router)
 router.include_router(message.router)
+app.include_router(router)
 
 
-@router.get("/")
+@app.get(f"{BASE_URL}")
 def health():
     """Change if server is alive"""
 
     return "OK"
 
 
-app.include_router(router)
 
 
 # @app.get("/stream")

@@ -20,7 +20,7 @@ async def me(
     return user_scheme.AuthenticatedUser.model_validate(user_instance)
 
 
-@router.get("/")
+@router.get("")
 async def read_users(
     _: UUID = Depends(user_service.authenticated_user),
     email_contains: str = "",
@@ -34,7 +34,7 @@ async def read_users(
     ]
 
 
-@router.put("/")
+@router.put("")
 async def update_user(
     user_data: user_scheme.UserUpdateScheme,
     user_id: UUID = Depends(user_service.authenticated_user),
@@ -45,7 +45,7 @@ async def update_user(
     return user_scheme.AuthenticatedUser.model_validate(user_instance)
 
 
-@router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     response: Response, user_id: UUID = Depends(user_service.authenticated_user)
 ) -> None:

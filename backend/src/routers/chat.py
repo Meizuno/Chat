@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.get("")
 async def read_chats(
     user_id: UUID = Depends(authenticated_user)
 ) -> List[chat_scheme.ChatScheme]:
@@ -34,7 +34,7 @@ async def read_chat(
     return chat_scheme.ChatScheme.model_validate(chat)
 
 
-@router.post("/")
+@router.post("")
 async def create_chat(
     participants: Annotated[List[UUID], Body()],
     chat: chat_scheme.ChatInputScheme,
